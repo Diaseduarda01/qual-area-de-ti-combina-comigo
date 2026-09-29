@@ -1,0 +1,136 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   quiz de áreas de TI — sistema visual devduda_
+   creme + preto + vermelho. roxo e azul ficam de fora:
+   o quiz é curto demais pra comportar cor secundária.
+   ============================================================ */
+
+@layer base {
+  :root {
+    --background: 43 30% 95%; /* #F7F5F0 creme */
+    --foreground: 0 0% 9%; /* #171717 preto */
+    --surface: 40 33% 92%; /* creme um tom abaixo, para blocos */
+
+    --primary: 12 76% 61%; /* #E76F51 vermelho da marca */
+    /* sobre o vermelho a tinta é preta: creme daria 2,8:1, preto dá 5,8:1 */
+    --primary-foreground: 0 0% 9%;
+    /* versão escurecida: única aprovada para texto pequeno sobre creme (6:1) */
+    --primary-ink: 12 70% 38%;
+    /* um passo acima: texto grande em vermelho sobre creme (3,8:1) */
+    --primary-display: 12 74% 50%;
+
+    --muted-foreground: 30 6% 38%; /* 5,9:1 sobre creme */
+    /* divisória decorativa: contraste baixo de propósito, é só respiro visual */
+    --border: 36 14% 82%;
+    /* limite de componente que se clica. A WCAG 1.4.11 pede 3:1 pra isso, e a
+       borda decorativa dá 1,36:1 — quem enxerga pouco não achava o botão.
+       Este token dá 3,4:1 sobre creme e 3,2:1 sobre o surface. */
+    --border-strong: 36 14% 50%;
+
+    --ink: 0 0% 9%;
+    --ink-foreground: 43 30% 95%;
+    --ink-muted: 40 8% 68%; /* 7:1 sobre #171717 */
+    --ink-border: 0 0% 22%;
+  }
+
+  /* bloco escuro do perfil: inverte os tokens em vez de espalhar
+     classes condicionais pelo JSX */
+  .on-ink {
+    --background: var(--ink);
+    --foreground: var(--ink-foreground);
+    --surface: 0 0% 12%;
+    --muted-foreground: var(--ink-muted);
+    --border: var(--ink-border);
+    --border-strong: 0 0% 42%; /* 3,4:1 sobre o preto do bloco */
+    /* sobre preto o vermelho cheio já passa 5,8:1 */
+    --primary-ink: 12 76% 61%;
+    --primary-display: 12 76% 61%;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    /* as telas entram deslizando 16px da direita. `overflow-x` só no body não
+       segura isso em todo navegador móvel — precisa estar no html também. */
+    overflow-x: hidden;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    overflow-x: hidden;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  ::selection {
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+  }
+
+  :focus-visible {
+    outline: 2px solid hsl(var(--primary-ink));
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* raio de 0.25rem: mesmo do portfolio. Quase reto, mas não cortante. */
+  button,
+  article,
+  details,
+  summary,
+  input {
+    border-radius: 0.25rem;
+  }
+
+  /* bloco de "ver mais": precisa de alvo de toque de verdade e de um sinal
+     visível de que abre e fecha */
+  .disclosure {
+    @apply flex min-h-11 cursor-pointer list-none items-center justify-between gap-3
+      font-mono text-sm text-[hsl(var(--primary-ink))];
+  }
+
+  .disclosure::-webkit-details-marker {
+    display: none;
+  }
+
+  .disclosure::after {
+    content: "+";
+    @apply font-mono text-base;
+  }
+
+  details[open] > .disclosure::after {
+    content: "−";
+  }
+
+  /* etiqueta monoespaçada — a assinatura `.java` da marca */
+  .tag {
+    @apply font-mono text-[0.7rem] uppercase tracking-[0.12em] text-[hsl(var(--muted-foreground))];
+  }
+
+  /* moldura padrão de todas as telas: mobile-first, gutter de 16px */
+  .shell {
+    @apply mx-auto w-full max-w-quiz px-4 sm:px-6;
+  }
+}
