@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { AreaCard } from "@/components/AreaCard";
 import { AREAS } from "@/data/areas";
 import { FRAMING } from "@/data/context";
+import { gerarCardDeResultado } from "@/lib/shareCard";
 import type { QuizResult } from "@/lib/scoring";
 import type { AreaId } from "@/types";
 
@@ -24,26 +25,73 @@ function shareText(result: QuizResult): string {
 
 export function Result({ result, onRestart, onAfunilar, branchDone }: ResultProps) {
   const [copied, setCopied] = useState(false);
+  const [gerando, setGerando] = useState(false);
 
   const destaque = new Set(result.areas.map((a) => a.area.id));
   const restante = result.ranking.filter((s) => !destaque.has(s.area));
 
+  /**
+   * Compartilha uma imagem 1080×1920, não um link.
+   *
+   * A ordem importa: no celular o menu do sistema recebe o arquivo e a pessoa
+   * posta no story em um toque. No desktop não existe esse menu, então baixa.
+   * Se a imagem não puder ser gerada, ainda dá pra compartilhar o texto — o
+   * botão nunca fica sem fazer nada.
+   */
   const share = async () => {
-    const text = `${shareText(result)}\n${window.location.href}`;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: "Qual área de TI combina com você?", text });
-        return;
-      } catch {
-        // pessoa cancelou o menu de compartilhar: cai pro copiar
-      }
-    }
+    if (gerando) return;
+    setGerando(true);
+    const texto = `${shareText(result)}
+${window.location.href}`;
+
     try {
-      await navigator.clipboard.writeText(text);
+      const blob = await gerarCardDeResultado({
+        profileName: result.profile.name,
+        profileText: result.profile.text,
+        secondary: result.secondaryProfile?.name,
+        areas: result.areas.map((a) => ({ name: a.area.name, score: a.n })),
+        url: window.location.host + window.location.pathname.replace(/\/$/, ""),
+        inconclusive: result.inconclusive,
+      });
+
+      if (blob) {
+        const arquivo = new File([blob], "meu-resultado.png", { type: "image/png" });
+        if (navigator.canShare?.({ files: [arquivo] })) {
+          try {
+            await navigator.share({ files: [arquivo], text: texto });
+            return;
+          } catch {
+            // pessoa cancelou o menu: não é erro, e não vale baixar por cima
+            return;
+          }
+        }
+        // desktop não tem menu de compartilhar arquivo: baixa a imagem
+        const href = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = href;
+        link.download = "meu-resultado.png";
+        link.click();
+        URL.revokeObjectURL(href);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2500);
+        return;
+      }
+
+      if (navigator.share) {
+        try {
+          await navigator.share({ title: "Qual área de TI combina com você?", text: texto });
+          return;
+        } catch {
+          // idem: cancelar não é falha
+        }
+      }
+      await navigator.clipboard.writeText(texto);
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     } catch {
       // sem clipboard (http, permissão negada) não há o que fazer além de ignorar
+    } finally {
+      setGerando(false);
     }
   };
 
@@ -166,9 +214,10 @@ export function Result({ result, onRestart, onAfunilar, branchDone }: ResultProp
           <button
             type="button"
             onClick={share}
-            className="bg-primary px-8 py-4 font-display text-base uppercase tracking-tight text-primary-foreground transition-transform active:scale-[0.99]"
+            disabled={gerando}
+            className="bg-primary px-8 py-4 font-display text-base uppercase tracking-tight text-primary-foreground transition-transform active:scale-[0.99] disabled:opacity-70"
           >
-            {copied ? "Copiado!" : "Compartilhar"}
+            {gerando ? "Gerando imagem…" : copied ? "Imagem salva!" : "Compartilhar"}
           </button>
           <button
             type="button"
